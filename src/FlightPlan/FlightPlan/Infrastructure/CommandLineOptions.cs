@@ -7,7 +7,7 @@ namespace FlightPlan.Infrastructure
 {
     public class CommandLineOptions
     {
-        [Option('p', "plan", Required = false, HelpText = "Specify the source and destination: several example: STN-IT (Source: London Stansted - Destination: Any part of italy) IT-STN (Source: Any part of italy - Destination: London Stansted) STN-BVA (Source: London Stansted - Destination: Paris Beauvais) IT-FR (Source: Any Part of Italy- Destination: Any Part of France)")]
+        [Option('p', "plan", Required = false, HelpText = "Specify the source and destination: several example: STN-IT (Source: London Stansted - Destination: Any part of italy) IT-STN (Source: Any part of italy - Destination: London Stansted) STN-BVA (Source: London Stansted - Destination: Paris Beauvais) IT-FR (Source: Any Part of Italy- Destination: Any Part of France) BRI-ALL (Source: Bari - Destination: All ryanair destination)")]
         public string Plan { get; set; }
 
         [Option('c', "country", Required = false, HelpText = "Print a list of available country")]
