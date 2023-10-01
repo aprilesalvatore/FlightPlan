@@ -119,13 +119,15 @@ namespace FlightPlan
                         throw new ArgumentNullException("Year");
 
                     var excelService = _container.Resolve<IExcelService>();
-                    Console.WriteLine($".... RyanAir flight plan processing");
+                    Console.WriteLine($".... RyanAir flight plan processing.");
 
                     var sheets = ryanService.CalculateSheets(option.Mounth, option.Year.Value, option.ExactlyMonth);
                     var filter = new FilterProcess(option.Plan, destinantions);
 
-                    if (!filter.IsCountrySource && !filter.IsCountryDestination)
+                    if (!filter.IsMultiplan && !filter.IsCountrySource && !filter.IsCountryDestination)
                         throw new InvalidOperationException("one country should be added at least");
+
+                    Console.WriteLine($".... Is Multiplan: {filter.IsMultiplan}.");
 
                     using (var excel = excelService.Create("RyanAir"))
                     {
@@ -133,23 +135,71 @@ namespace FlightPlan
                         {
                             foreach (var source in filter.Source)
                             {
-                                foreach (var dest in filter.Destination)
+                                if (filter.IsMultiplan)
                                 {
-                                    Console.WriteLine($".... Start Processing Source: {source} Destination: {dest} Month: {sheet.Item1} Year: {sheet.Item2}");
-
-                                    var plan = Task.Run(() => ryanService.GetFlightPlan(source, dest, sheet.Item1, sheet.Item2)).Result;
-
-                                    if (plan != null && plan.days.Count > 0 && plan.month > 0)
+                                    foreach (var stop in filter.Stop)
                                     {
-                                        plans.Add(plan);
+                                        Console.WriteLine($".... Start Processing Source: {source}, Stop Destination: {stop} Month: {sheet.Item1} Year: {sheet.Item2}");
+
+                                        var plan = Task.Run(() => ryanService.GetFlightPlan(source, stop, sheet.Item1, sheet.Item2)).Result;
+
+                                        if (plan != null && plan.days.Count > 0 && plan.month > 0)
+                                        {
+                                            plans.Add(plan);
+                                        }
+
+                                        foreach (var dest in filter.Destination)
+                                        {
+                                            Console.WriteLine($".... Start Processing Stop Source: {stop}, Destination: {dest} Month: {sheet.Item1} Year: {sheet.Item2}");
+
+                                            plan = Task.Run(() => ryanService.GetFlightPlan(stop, dest, sheet.Item1, sheet.Item2)).Result;
+
+                                            if (plan != null && plan.days.Count > 0 && plan.month > 0)
+                                            {
+                                                plans.Add(plan);
+                                            }
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    foreach (var dest in filter.Destination)
+                                    {
+                                        Console.WriteLine($".... Start Processing Source: {source} Destination: {dest} Month: {sheet.Item1} Year: {sheet.Item2}");
+
+                                        var plan = Task.Run(() => ryanService.GetFlightPlan(source, dest, sheet.Item1, sheet.Item2)).Result;
+
+                                        if (plan != null && plan.days.Count > 0 && plan.month > 0)
+                                        {
+                                            plans.Add(plan);
+                                        }
                                     }
                                 }
                             }
 
                             if(plans.Count > 0)
                             {
-                                excelService.CreateSheet(excel, plans, sheet.Item1, sheet.Item2, destinantions, filter.IsCountrySource);
-                                plans.Clear();
+                                if (filter.IsMultiplan)
+                                {
+                                    var res = new List<Multiplan>();
+                                    var sourceStopPlan = plans.FirstOrDefault(x => x.source == filter.Source.FirstOrDefault());
+
+                                    if (sourceStopPlan != null)
+                                    {
+                                        foreach (var stopDestinationPlan in plans.Where(x => x.source == filter.Stop.FirstOrDefault()))
+                                        {
+                                            var multiPlans = ryanService.BuildMultiplan(sourceStopPlan, stopDestinationPlan);
+                                            res.AddRange(multiPlans);
+                                        }
+                                    }
+
+                                    excelService.CreateSheetMultiplan(excel, res, sheet.Item1, sheet.Item2, destinantions, filter.IsCountrySource);
+                                }
+                                else
+                                {
+                                    excelService.CreateSheet(excel, plans, sheet.Item1, sheet.Item2, destinantions, filter.IsCountrySource);
+                                    plans.Clear();
+                                }
                             }
                         }
 

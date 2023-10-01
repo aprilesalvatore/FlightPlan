@@ -11,5 +11,7 @@ namespace FlightPlan.Interface
         ExcelPackage Create(string filename);
 
         void CreateSheet(ExcelPackage package, List<Plan> plans, int year, int month, List<Destination> destinations, bool isFixedDestination);
+
+        void CreateSheetMultiplan(ExcelPackage package, List<Multiplan> plans, int month, int year, List<Destination> destinations, bool isFixedDestination);
     }
 }

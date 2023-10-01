@@ -16,6 +16,9 @@ namespace FlightPlan.Model
         public string number { get; set; }
         public string departureTime { get; set; }
         public string arrivalTime { get; set; }
+
+        public string destination { get; set; }
+        public string source { get; set; }
     }
 
     public class Plan

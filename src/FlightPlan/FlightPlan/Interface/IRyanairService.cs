@@ -13,5 +13,7 @@ namespace FlightPlan.Interface
         List<Tuple<int, int>> CalculateSheets(int? month, int year, bool exactlyMonth);
 
         Task<Plan> GetFlightPlan(string source, string destination, int? month, int year);
+
+        List<Multiplan> BuildMultiplan(Plan sourceStopPlan, Plan stopDestinationPlan);
     }
 }
