@@ -155,7 +155,7 @@ namespace FlightPlan
                                     {
                                         foreach (var stopDestinationPlan in plans.Where(x => x.source == filter.Stop.FirstOrDefault()))
                                         {
-                                            var multiPlans = _ryanairService.BuildMultiplan(sourceStopPlan, stopDestinationPlan);
+                                            var multiPlans = _ryanairService.BuildMultiplan(sourceStopPlan, stopDestinationPlan, option.Interval ?? 150);
                                             res.AddRange(multiPlans);
                                         }
                                     }

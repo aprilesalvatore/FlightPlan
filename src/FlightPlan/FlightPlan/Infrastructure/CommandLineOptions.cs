@@ -25,5 +25,8 @@ namespace FlightPlan.Infrastructure
         [Option('y', "year", Required = false, HelpText = "Specify the numer of year (Eg. 2023)")]
         public int? Year { get; set; }
 
+        [Option('i', "interval", Required = false, HelpText = "Specify the stop interval in multiplan scenario expressed in minutes")]
+        public int? Interval { get; set; }
+
     }
 }

@@ -14,6 +14,6 @@ namespace FlightPlan.Interface
 
         Task<Plan> GetFlightPlan(string source, string destination, int? month, int year);
 
-        List<Multiplan> BuildMultiplan(Plan sourceStopPlan, Plan stopDestinationPlan);
+        List<Multiplan> BuildMultiplan(Plan sourceStopPlan, Plan stopDestinationPlan, int intervalMinutes);
     }
 }

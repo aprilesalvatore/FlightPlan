@@ -118,7 +118,7 @@ namespace FlightPlan.Service
             return res;
         }
 
-        public List<Multiplan> BuildMultiplan(Plan sourceStopPlan, Plan stopDestinationPlan)
+        public List<Multiplan> BuildMultiplan(Plan sourceStopPlan, Plan stopDestinationPlan, int intervalMinutes = 150 )
         {
             var multiPlans = new List<Multiplan>();
             if (sourceStopPlan == null)
@@ -141,7 +141,7 @@ namespace FlightPlan.Service
                             var departure = DateTime.ParseExact(flDayStopDest.departureTime, "HH:mm", CultureInfo.InvariantCulture);
 
                             var diff = departure - arrival;
-                            if (diff.TotalMilliseconds >= 3600000 && diff.TotalMilliseconds <= 9000000)
+                            if (diff.TotalMilliseconds >= 60 && diff.TotalMinutes <= intervalMinutes)
                             {
                                 flSourceStop.source = sourceStopPlan.source;
                                 flSourceStop.destination = sourceStopPlan.destination;

@@ -2,7 +2,7 @@
   "profiles": {
     "FlightPlan": {
       "commandName": "Project",
-      "commandLineArgs": "-p BRI-FCO-BER -y 2023 -m 11 -e"
+      "commandLineArgs": "-p BRI-BGY-ALL -y 2023 -m 11 -e"
     }
   }
 }
