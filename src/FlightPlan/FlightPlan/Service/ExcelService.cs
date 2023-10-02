@@ -51,7 +51,6 @@ namespace FlightPlan.Service
                     sheet.Cells[1, index].Value = $"{item.Key} {new DateTime(year, month, item.Key).ToString("ddd")}";
                     SetStyle(sheet.Cells[1, 1], true);
                     SetStyle(sheet.Cells[1, index], true);
-
                     sheet.Row(index).Height = 30;
                 }
 
@@ -131,6 +130,11 @@ namespace FlightPlan.Service
                     else
                         x.Width = 7.5;
                 });
+
+                for (int i = 0; i < sheet.Columns.Count(); i++)
+                {
+                    sheet.View.FreezePanes(1, i + 1);
+                }
             }
         }
 
