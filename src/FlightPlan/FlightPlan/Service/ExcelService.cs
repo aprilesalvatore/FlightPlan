@@ -25,116 +25,7 @@ namespace FlightPlan.Service
             return new ExcelPackage($"{my_folder}\\{filename}_{DateTime.Now.ToString("ddMMyyyy_HHmmss")}.xlsx");
         }
 
-        public void CreateSheetMultiplan(ExcelPackage package, List<Multiplan> plans, int month, int year, List<Destination> destinations, bool isFixedDestination)
-        {
-            var sheetName = $"{month}-{year}";
-
-            var sheet = package.Workbook.Worksheets.FirstOrDefault(x => x.Name == sheetName);
-            if (sheet == null)
-                sheet = package.Workbook.Worksheets.Add(sheetName);
-
-            var flatPlan = BuildMultiFlatPlan(plans, year, month);
-
-            flatPlan.ForEach(x => Debug.WriteLine(x));
-
-            var destDic = destinations.ToDictionary(x => x.Tag, y => y);
-
-            if (flatPlan != null && flatPlan.Count > 0)
-            {
-                var grouped = flatPlan.GroupBy(x => x.day).OrderBy(x => x.Key).ToList();
-
-                foreach (var item in grouped)
-                {
-                    var index = grouped.IndexOf(item) + 2;
-
-                    sheet.Cells[1, 1].Value = CalculateNameHeader(destDic, item);
-                    sheet.Cells[1, index].Value = $"{item.Key} {new DateTime(year, month, item.Key).ToString("ddd")}";
-                    SetStyle(sheet.Cells[1, 1], true);
-                    SetStyle(sheet.Cells[1, index], true);
-
-                    sheet.Row(index).Height = 30;
-                }
-
-                var cls = new List<Header>();
-
-                var dest = flatPlan.Select(x => CalculateName(destDic, x)).Distinct().ToList();
-
-                dest.ForEach(x =>
-                {
-                    foreach (var item in grouped)
-                    {
-                        var head = new Header() { Count = item.Count(y => CalculateName(destDic, y) == x), Name = x };
-
-                        cls.Add(head);
-                    }
-                });
-
-                var orderdedHeader = cls.OrderBy(x => x.Name).GroupBy(x => x.Name).Select(x => new Header()
-                {
-                    Name = x.Key,
-                    Count = x.Max(u => u.Count)
-                }).ToList();
-
-                var lst = new List<string>();
-
-                foreach (var item in orderdedHeader)
-                {
-                    for (int i = 0; i < item.Count; i++)
-                    {
-                        lst.Add(item.Name);
-                    }
-                }
-
-                for (int i = 0; i < lst.Count; i++)
-                {
-                    var item = lst[i];
-
-                    var index = i + 2;
-
-                    sheet.Cells[index, 1].Value = item;
-                    SetStyle(sheet.Cells[index, 1], false);
-
-                    sheet.Row(index).Height = 30;
-                }
-
-                int rowNumber = lst.Count;
-
-                foreach (var item in grouped)
-                {
-                    var flt = item.ToList();
-                    var col = grouped.IndexOf(item) + 2;
-
-                    foreach (var plan in flt)
-                    {
-                        var name = CalculateName(destDic, plan);
-
-                        for (int rowCol = 2; rowCol < rowNumber + 2; rowCol++)
-                        {
-                            if (name == sheet.Cells[rowCol, 1].Value.ToString() && sheet.Cells[rowCol, col].Value == null)
-                            {
-                                sheet.Cells[rowCol, col].RichText.Add($"{plan.departureSourceTime}{((char)10).ToString()}{plan.arrivalStopTime}{((char)10).ToString()}{plan.departureStopTime}{((char)10).ToString()}{plan.arrivalDestinationTime}");
-                                sheet.Cells[rowCol, col].Style.WrapText = true;
-                                sheet.Row(rowCol).Height = 60;
-                                SetStyle(sheet.Cells[rowCol, col], false);
-                                break;
-                            }
-
-                            SetStyle(sheet.Cells[rowCol, col], false);
-                        }
-                    }
-                }
-
-                sheet.Columns.ToList().ForEach(x =>
-                {
-                    if (x.StartColumn == 1)
-                        x.AutoFit();
-                    else
-                        x.Width = 7.5;
-                });
-            }
-        }
-
-        public void CreateSheet(ExcelPackage package, List<Plan> plans, int month, int year, List<Destination> destinations, bool isFixedDestination)
+        public void CreateSheet(ExcelPackage package, List<IPlan> plans, int month, int year, List<Destination> destinations, bool isFixedDestination)
         {
             var sheetName = $"{month}-{year}";
 
@@ -156,7 +47,7 @@ namespace FlightPlan.Service
                 {
                     var index = grouped.IndexOf(item) + 2;
 
-                    sheet.Cells[1, 1].Value = CalculateNameHeader(isFixedDestination, destDic, item);
+                    sheet.Cells[1, 1].Value = item.FirstOrDefault().ToHeader(destDic, isFixedDestination);
                     sheet.Cells[1, index].Value = $"{item.Key} {new DateTime(year, month, item.Key).ToString("ddd")}";
                     SetStyle(sheet.Cells[1, 1], true);
                     SetStyle(sheet.Cells[1, index], true);
@@ -166,13 +57,13 @@ namespace FlightPlan.Service
 
                 var cls = new List<Header>();
 
-                var dest = flatPlan.Select(x => CalculateName(isFixedDestination, destDic, x)).Distinct().ToList();
+                var dest = flatPlan.Select(x => x.ToName(destDic, isFixedDestination)).Distinct().ToList();
 
                 dest.ForEach(x =>
                 {
                     foreach (var item in grouped)
                     {
-                        var head = new Header() { Count = item.Count(y => CalculateName(isFixedDestination, destDic, y) == x), Name = x };
+                        var head = new Header() { Count = item.Count(y => y.ToName(destDic, isFixedDestination) == x), Name = x };
 
                         cls.Add(head);
                     }
@@ -215,15 +106,15 @@ namespace FlightPlan.Service
 
                     foreach (var plan in flt)
                     {
-                        var name = CalculateName(isFixedDestination, destDic, plan);
+                        var name = plan.ToName(destDic, isFixedDestination);
 
                         for (int rowCol = 2; rowCol < rowNumber + 2; rowCol++)
                         {
                             if (name == sheet.Cells[rowCol, 1].Value.ToString() && sheet.Cells[rowCol, col].Value == null)
                             {
-                                sheet.Cells[rowCol, col].RichText.Add($"{plan.departureTime}{((char)10).ToString()}{plan.arrivalTime}");
+                                sheet.Cells[rowCol, col].RichText.Add(plan.ToRichText());
                                 sheet.Cells[rowCol, col].Style.WrapText = true;
-                                sheet.Row(rowCol).Height = 30;
+                                sheet.Row(rowCol).Height = 60;
                                 SetStyle(sheet.Cells[rowCol, col], false);
                                 break;
                             }
@@ -243,40 +134,6 @@ namespace FlightPlan.Service
             }
         }
 
-        private string CalculateNameHeader(Dictionary<string, Destination> destDic, IGrouping<int, MultiFlatPlan> item)
-        {
-            return $"SOURCE: [{item.FirstOrDefault().source} - {destDic[item.FirstOrDefault().source].Name}] STOP [{item.FirstOrDefault().stop} - {destDic[item.FirstOrDefault().stop].Name}] ";
-        }
-
-        private string CalculateNameHeader(bool isFixedDestination, Dictionary<string, Destination> destDic, IGrouping<int, FlatPlan> item)
-        {
-            if (isFixedDestination)
-            {
-                return $"DEST: {item.FirstOrDefault().destination} - {destDic[item.FirstOrDefault().destination].Name}";
-            }
-            else
-            {
-                return $"SOURCE: {item.FirstOrDefault().source} - {destDic[item.FirstOrDefault().source].Name}";
-            }
-        }
-
-        private string CalculateName(bool isFixedDestination, Dictionary<string, Destination> destDic, FlatPlan plan)
-        {
-            if (isFixedDestination)
-            {
-                return $"{plan.source} - {destDic[plan.source].Name}";
-            }
-            else
-            {
-                return $"{plan.destination} - {destDic[plan.destination].Name}";
-            }
-        }
-
-        private string CalculateName(Dictionary<string, Destination> destDic, MultiFlatPlan plan)
-        {
-            return $"{plan.destination} - {destDic[plan.destination].Name}";
-        }
-
         private void SetStyle(ExcelRange range, bool isHeader)
         {
             if (isHeader)
@@ -293,42 +150,45 @@ namespace FlightPlan.Service
 
         }
 
-        private List<FlatPlan> BuildFlatPlan(List<Plan> plan, int year, int month)
+        private List<IFlatPlan> BuildFlatPlan(List<IPlan> plan, int year, int month)
         {
-            var flatted = plan.SelectMany(x => x.days.SelectMany(y => y.flights.Select(z => new FlatPlan()
+            if (plan.OfType<Multiplan>().Any())
             {
-                arrivalTime = z.arrivalTime,
-                carrierCode = z.carrierCode,
-                departureTime = z.departureTime,
-                number = z.number,
-                day = y.day,
-                month = month,
-                year = year,
-                destination = x.destination,
-                source = x.source
-            }))).ToList();
+                var flatted = plan.OfType<Multiplan>().SelectMany(x => x.days.SelectMany(y => y.flights.Select(z => new MultiFlatPlan()
+                {
+                    stop = x.stop,
+                    arrivalDestinationTime = y.flights.LastOrDefault().arrivalTime,
+                    departureSourceTime = y.flights.FirstOrDefault().departureTime,
+                    arrivalStopTime = y.flights.FirstOrDefault().arrivalTime,
+                    departureStopTime = y.flights.LastOrDefault().departureTime,
+                    day = y.day,
+                    month = month,
+                    year = year,
+                    destination = x.destination,
+                    source = x.source
+                }))).ToList();
 
-            return flatted;
-        }
-
-        private List<MultiFlatPlan> BuildMultiFlatPlan(List<Multiplan> plan, int year, int month)
-        {
-            var flatted = plan.SelectMany(x => x.days.SelectMany(y => y.flights.Select(z => new MultiFlatPlan()
+                return flatted.OfType<IFlatPlan>().ToList();
+            }
+            else if (plan.OfType<Plan>().Any())
             {
-                stop = x.stop,
-                arrivalDestinationTime = y.flights.LastOrDefault().arrivalTime,
-                departureSourceTime = y.flights.FirstOrDefault().departureTime,
-                arrivalStopTime = y.flights.FirstOrDefault().arrivalTime,
-                departureStopTime = y.flights.LastOrDefault().departureTime,
-                day = y.day,
-                month = month,
-                year = year,
-                destination = x.destination,
-                source = x.source
-            }))).ToList();
+                var flatted = plan.OfType<Plan>().SelectMany(x => x.days.SelectMany(y => y.flights.Select(z => new FlatPlan()
+                {
+                    arrivalTime = z.arrivalTime,
+                    carrierCode = z.carrierCode,
+                    departureTime = z.departureTime,
+                    number = z.number,
+                    day = y.day,
+                    month = month,
+                    year = year,
+                    destination = x.destination,
+                    source = x.source
+                }))).ToList();
 
-            return flatted;
+                return flatted.OfType<IFlatPlan>().ToList();
+            }
+
+            return new List<IFlatPlan>();
         }
-
     }
 }

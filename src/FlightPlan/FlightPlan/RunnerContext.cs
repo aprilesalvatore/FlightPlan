@@ -177,8 +177,10 @@ namespace FlightPlan
                                 }
                             }
 
-                            if(plans.Count > 0)
+                            if (plans.Count > 0)
                             {
+                                var lst = plans.OfType<IPlan>().ToList();
+
                                 if (filter.IsMultiplan)
                                 {
                                     var res = new List<Multiplan>();
@@ -192,14 +194,11 @@ namespace FlightPlan
                                             res.AddRange(multiPlans);
                                         }
                                     }
-
-                                    excelService.CreateSheetMultiplan(excel, res, sheet.Item1, sheet.Item2, destinantions, filter.IsCountrySource);
+                                    lst = res.OfType<IPlan>().ToList();
                                 }
-                                else
-                                {
-                                    excelService.CreateSheet(excel, plans, sheet.Item1, sheet.Item2, destinantions, filter.IsCountrySource);
-                                    plans.Clear();
-                                }
+                                
+                                excelService.CreateSheet(excel, lst, sheet.Item1, sheet.Item2, destinantions, filter.IsCountrySource);
+                                lst.Clear();
                             }
                         }
 

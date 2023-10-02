@@ -6,6 +6,8 @@ namespace FlightPlan.Model
 {
     public class Multiplan: Plan
     {
-        public string stop { get; set; } 
+        public string stop { get; set; }
+
+       
     }
 }

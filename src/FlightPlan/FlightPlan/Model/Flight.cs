@@ -1,4 +1,5 @@
-﻿using System;
+﻿using FlightPlan.Interface;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -21,11 +22,11 @@ namespace FlightPlan.Model
         public string source { get; set; }
     }
 
-    public class Plan
+    public class Plan: IPlan
     {
         public string destination { get; set; }
         public string source { get; set; }
         public int month { get; set; }
-        public List<Day> days { get; set; }
+        public List<Day> days { get; set; }  
     }
 }
