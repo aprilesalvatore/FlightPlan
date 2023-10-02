@@ -17,11 +17,13 @@ using FlightPlan.Interface;
 using OfficeOpenXml;
 using FlightPlan.Model;
 using System.Collections.Generic;
+using static System.Net.WebRequestMethods;
 
 namespace FlightPlan
 {
     public class RunnerContext
     {
+        private IRyanairService _ryanairService;
         private IConfiguration _configuration;
         private IContainer _container;
         private FlightPlanConfiguration _flightPlanConfiguration;
@@ -86,7 +88,7 @@ namespace FlightPlan
                     cts.Cancel();
                     e.Cancel = true;
                 };
-
+                _ryanairService = _container.Resolve<IRyanairService>();
                 InternalRun(args);
             }
             catch (Exception ex)
@@ -102,9 +104,9 @@ namespace FlightPlan
         {
             Parser.Default.ParseArguments<CommandLineOptions>(args).WithParsed<CommandLineOptions>(option =>
             {
-                var ryanService = _container.Resolve<IRyanairService>();
+
                 Console.WriteLine($".... Get Destinations");
-                var destinantions = Task.Run(() => ryanService.GetDestinations()).Result;
+                var destinantions = Task.Run(() => _ryanairService.GetDestinations()).Result;
 
                 Console.WriteLine($".... Found {destinantions.Count} destinations");
 
@@ -121,7 +123,7 @@ namespace FlightPlan
                     var excelService = _container.Resolve<IExcelService>();
                     Console.WriteLine($".... RyanAir flight plan processing.");
 
-                    var sheets = ryanService.CalculateSheets(option.Mounth, option.Year.Value, option.ExactlyMonth);
+                    var sheets = _ryanairService.CalculateSheets(option.Mounth, option.Year.Value, option.ExactlyMonth);
                     var filter = new FilterProcess(option.Plan, destinantions);
 
                     Console.WriteLine($".... Is Multiplan: {filter.IsMultiplan}.");
@@ -133,51 +135,16 @@ namespace FlightPlan
                             foreach (var source in filter.Source)
                             {
                                 if (filter.IsMultiplan)
-                                {
-                                    foreach (var stop in filter.Stop)
-                                    {
-                                        Console.WriteLine($".... Start Processing Source: {source}, Stop Destination: {stop} Month: {sheet.Item1} Year: {sheet.Item2}");
-
-                                        var plan = Task.Run(() => ryanService.GetFlightPlan(source, stop, sheet.Item1, sheet.Item2)).Result;
-
-                                        if (plan != null && plan.days.Count > 0 && plan.month > 0)
-                                        {
-                                            plans.Add(plan);
-                                        }
-
-                                        foreach (var dest in filter.Destination)
-                                        {
-                                            Console.WriteLine($".... Start Processing Stop Source: {stop}, Destination: {dest} Month: {sheet.Item1} Year: {sheet.Item2}");
-
-                                            plan = Task.Run(() => ryanService.GetFlightPlan(stop, dest, sheet.Item1, sheet.Item2)).Result;
-
-                                            if (plan != null && plan.days.Count > 0 && plan.month > 0)
-                                            {
-                                                plans.Add(plan);
-                                            }
-                                        }
-                                    }
-                                }
+                                    plans = RunMultiple(filter, sheet, source);
                                 else
-                                {
-                                    foreach (var dest in filter.Destination)
-                                    {
-                                        Console.WriteLine($".... Start Processing Source: {source} Destination: {dest} Month: {sheet.Item1} Year: {sheet.Item2}");
-
-                                        var plan = Task.Run(() => ryanService.GetFlightPlan(source, dest, sheet.Item1, sheet.Item2)).Result;
-
-                                        if (plan != null && plan.days.Count > 0 && plan.month > 0)
-                                        {
-                                            plans.Add(plan);
-                                        }
-                                    }
-                                }
+                                    plans = RunSingle(filter, sheet, source);
                             }
 
                             if (plans.Count > 0)
                             {
                                 var lst = plans.OfType<IPlan>().ToList();
                                 int height = 30;
+
                                 if (filter.IsMultiplan)
                                 {
                                     height = 60;
@@ -188,13 +155,13 @@ namespace FlightPlan
                                     {
                                         foreach (var stopDestinationPlan in plans.Where(x => x.source == filter.Stop.FirstOrDefault()))
                                         {
-                                            var multiPlans = ryanService.BuildMultiplan(sourceStopPlan, stopDestinationPlan);
+                                            var multiPlans = _ryanairService.BuildMultiplan(sourceStopPlan, stopDestinationPlan);
                                             res.AddRange(multiPlans);
                                         }
                                     }
                                     lst = res.OfType<IPlan>().ToList();
                                 }
-                                
+
                                 excelService.CreateSheet(excel, lst, sheet.Item1, sheet.Item2, destinantions, filter.IsCountrySource, height);
                                 lst.Clear();
                             }
@@ -212,5 +179,48 @@ namespace FlightPlan
                 Console.ForegroundColor = ConsoleColor.White;
             });
         }
+
+        private List<Plan> RunMultiple(FilterProcess filter, Tuple<int, int> sheet, string source)
+        {
+            var plans = new List<Plan>();
+            foreach (var stop in filter.Stop)
+            {
+                Console.WriteLine($".... Start Processing Source: {source}, Stop Destination: {stop} Month: {sheet.Item1} Year: {sheet.Item2}");
+
+                var plan = Task.Run(() => _ryanairService.GetFlightPlan(source, stop, sheet.Item1, sheet.Item2)).Result;
+
+                if (plan != null && plan.days.Count > 0 && plan.month > 0)
+                {
+                    plans.Add(plan);
+                }
+
+                var singlePlan = RunSingle(filter, sheet, stop, "Stop");
+
+                if (singlePlan != null)
+                    plans.AddRange(singlePlan);
+            }
+
+            return plans;
+        }
+
+        private List<Plan> RunSingle(FilterProcess filter, Tuple<int, int> sheet, string source, string label = null)
+        {
+            var plans = new List<Plan>();
+
+            foreach (var dest in filter.Destination)
+            {
+                Console.WriteLine($".... Start Processing {label} Source: {source} Destination: {dest} Month: {sheet.Item1} Year: {sheet.Item2}");
+
+                var plan = Task.Run(() => _ryanairService.GetFlightPlan(source, dest, sheet.Item1, sheet.Item2)).Result;
+
+                if (plan != null && plan.days.Count > 0 && plan.month > 0)
+                {
+                    plans.Add(plan);
+                }
+            }
+
+            return plans;
+        }
+
     }
 }
