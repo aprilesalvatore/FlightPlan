@@ -124,9 +124,6 @@ namespace FlightPlan
                     var sheets = ryanService.CalculateSheets(option.Mounth, option.Year.Value, option.ExactlyMonth);
                     var filter = new FilterProcess(option.Plan, destinantions);
 
-                    if (!filter.IsMultiplan && !filter.IsCountrySource && !filter.IsCountryDestination)
-                        throw new InvalidOperationException("one country should be added at least");
-
                     Console.WriteLine($".... Is Multiplan: {filter.IsMultiplan}.");
 
                     using (var excel = excelService.Create("RyanAir"))
@@ -180,9 +177,10 @@ namespace FlightPlan
                             if (plans.Count > 0)
                             {
                                 var lst = plans.OfType<IPlan>().ToList();
-
+                                int height = 30;
                                 if (filter.IsMultiplan)
                                 {
+                                    height = 60;
                                     var res = new List<Multiplan>();
                                     var sourceStopPlan = plans.FirstOrDefault(x => x.source == filter.Source.FirstOrDefault());
 
@@ -197,7 +195,7 @@ namespace FlightPlan
                                     lst = res.OfType<IPlan>().ToList();
                                 }
                                 
-                                excelService.CreateSheet(excel, lst, sheet.Item1, sheet.Item2, destinantions, filter.IsCountrySource);
+                                excelService.CreateSheet(excel, lst, sheet.Item1, sheet.Item2, destinantions, filter.IsCountrySource, height);
                                 lst.Clear();
                             }
                         }

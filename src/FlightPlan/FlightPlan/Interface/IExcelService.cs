@@ -10,6 +10,6 @@ namespace FlightPlan.Interface
     {
         ExcelPackage Create(string filename);
 
-        void CreateSheet(ExcelPackage package, List<IPlan> plans, int year, int month, List<Destination> destinations, bool isFixedDestination);
+        void CreateSheet(ExcelPackage package, List<IPlan> plans, int year, int month, List<Destination> destinations, bool isFixedDestination, int heigth);
     }
 }

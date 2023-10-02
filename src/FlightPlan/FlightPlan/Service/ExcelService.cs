@@ -25,7 +25,7 @@ namespace FlightPlan.Service
             return new ExcelPackage($"{my_folder}\\{filename}_{DateTime.Now.ToString("ddMMyyyy_HHmmss")}.xlsx");
         }
 
-        public void CreateSheet(ExcelPackage package, List<IPlan> plans, int month, int year, List<Destination> destinations, bool isFixedDestination)
+        public void CreateSheet(ExcelPackage package, List<IPlan> plans, int month, int year, List<Destination> destinations, bool isFixedDestination, int heigth)
         {
             var sheetName = $"{month}-{year}";
 
@@ -114,7 +114,7 @@ namespace FlightPlan.Service
                             {
                                 sheet.Cells[rowCol, col].RichText.Add(plan.ToRichText());
                                 sheet.Cells[rowCol, col].Style.WrapText = true;
-                                sheet.Row(rowCol).Height = 60;
+                                sheet.Row(rowCol).Height = heigth;
                                 SetStyle(sheet.Cells[rowCol, col], false);
                                 break;
                             }
