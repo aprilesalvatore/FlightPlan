@@ -164,10 +164,13 @@ namespace FlightPlan
 
                                 excelService.CreateSheet(excel, lst, sheet.Item1, sheet.Item2, destinantions, filter.IsCountrySource, height);
                                 lst.Clear();
+                                excel.Save();
                             }
+                            else
+                                Console.WriteLine($"No Plan is Found - Please check the parameters");
                         }
 
-                        excel.Save();
+                        
                     }
 
                 }
